@@ -163,7 +163,8 @@ E2E_OUTPUT
   sees a role without attributes and with connection limit 10; that `team_b_main` can neither
   read nor create tables in `team_a_orders`; that rotation makes the new password work and the
   old one fail; that deleting a `delete` claim drops database and role and a `retain` claim keeps
-  them; that revoking a grant keeps the database; and that metrics are served.
+  them, after which the claim that was in conflict takes over the retained database with its
+  data; that revoking a grant keeps the database; and that metrics are served.
 
 ## Limits
 
@@ -172,6 +173,10 @@ E2E_OUTPUT
   connection itself, add a `pg_hba` rule to the cluster, for example `host sameuser all all
   scram-sha-256` before a `reject` rule, which works because a claim's owner defaults to the
   database name. This is not tested here.
+- A database and role kept by `reclaimPolicy: retain` stay in PostgreSQL with their data. A
+  later claim for the same names takes them over and gets a new password. With the default
+  pattern `{namespace}_*` only claims from the same namespace can do that; a broader
+  `namePattern` such as `*` lets other admitted namespaces take over retained databases.
 - Database and owner names cannot change after creation (CloudNativePG treats the database name
   as immutable); the claim turns `Invalid` instead.
 - The app Secret is updated as soon as a rotated password is written, a few seconds before

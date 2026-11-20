@@ -214,6 +214,12 @@ n=$(k -n db get databases.postgresql.cnpg.io,databaseroles.postgresql.cnpg.io -l
 [[ "$n" == 0 ]] || fail "CNPG objects of team-a/orders left: $n"
 pass "team_a_orders and its role kept in PostgreSQL, CNPG objects removed"
 
+log "a later claim for the same name takes over the retained database"
+wait_phase team-a dup Ready
+DUP_URI=$(secret team-a dup-db uri)
+[[ "$(tenant_sql "$DUP_URI" 'select count(*) from t')" == 1 ]] || fail "team-a/dup does not see the retained table"
+pass "team-a/dup (formerly in conflict) now owns team_a_orders with the old data and a new password"
+
 log "revoking the grant keeps existing databases"
 k -n db delete databasegrant team-a
 expect_phase team-a three NotGranted "existing database and role are kept"
