@@ -169,7 +169,7 @@ pass "team-a pod connected with its Secret; pg_trgm present; role has no attribu
 
 log "tenant isolation inside PostgreSQL"
 A_URI=$(secret team-a orders-db uri)
-B_URI=$(secret team-b main uri)
+B_URI=$(secret team-b main-db uri)
 B_INTO_A=${B_URI%/team_b_main}/team_a_orders
 if err=$(tenant_sql "$B_INTO_A" "select * from t" 2>&1); then
   fail "team_b_main could read team_a_orders.t: $err"
