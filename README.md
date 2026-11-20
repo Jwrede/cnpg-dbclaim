@@ -147,7 +147,43 @@ The application then uses `team-a/orders-db` like CloudNativePG's app Secret, fo
 Output of the end-to-end test (`e2e/run.sh`, CloudNativePG 1.30.2 on kind):
 
 ```
-E2E_OUTPUT
+$ kubectl get databaseclaims -A
+NAMESPACE   NAME     CLUSTER   DATABASE        PHASE        SECRET      AGE
+team-a      dup      shared    team_a_orders   Conflict     dup-db      14s
+team-a      four     shared    team_a_four     NotGranted   four-db     10s
+team-a      gis      shared    team_a_gis      NotGranted   gis-db      16s
+team-a      orders   shared    team_a_orders   Ready        orders-db   19s
+team-a      steal    shared    team_b_x        NotGranted   steal-db    16s
+team-a      three    shared    team_a_three    Ready        three-db    12s
+team-b      main     shared    team_b_main     Ready        main-db     17s
+team-c      x        shared    team_c_x        NotGranted   x-db        16s
+
+$ kubectl -n db get databases.postgresql.cnpg.io,databaseroles.postgresql.cnpg.io
+NAME                                                   AGE   CLUSTER   PG NAME         APPLIED   MESSAGE
+database.postgresql.cnpg.io/dbclaim-48bae5099a38da5e   13s   shared    team_b_main     true
+database.postgresql.cnpg.io/dbclaim-4a886ee1a4b7dbb0   8s    shared    team_a_three    true
+database.postgresql.cnpg.io/dbclaim-75c1a60b898072af   19s   shared    team_a_orders   true
+
+NAME                                                       AGE   CLUSTER   PG NAME         APPLIED   MESSAGE
+databaserole.postgresql.cnpg.io/dbclaim-48bae5099a38da5e   13s   shared    team_b_main     true
+databaserole.postgresql.cnpg.io/dbclaim-4a886ee1a4b7dbb0   8s    shared    team_a_three    true
+databaserole.postgresql.cnpg.io/dbclaim-75c1a60b898072af   19s   shared    team_a_orders   true
+
+PASS: team-c/x is NotGranted: no DatabaseGrant in namespace db admits this claim for cluster shared: grant team-a does not include namespace team-c; grant tenants does not include namespace team-c
+PASS: team-a/steal is NotGranted: no DatabaseGrant in namespace db admits this claim for cluster shared: grant team-a allows only names matching "team_a_*", not "team_b_x"; grant tenants does not include namespace team-a
+PASS: team-a/gis is NotGranted: no DatabaseGrant in namespace db admits this claim for cluster shared: grant team-a does not allow extension "postgis"; grant tenants does not include namespace team-a
+PASS: team-a/dup is Conflict: database "team_a_orders" on cluster db/shared is already used by team-a/orders
+PASS: team-a/four is NotGranted: no DatabaseGrant in namespace db admits this claim for cluster shared: grant team-a allows 2 database(s) for namespace team-a; grant tenants does not include namespace team-a
+PASS: only the three admitted claims have Database objects
+PASS: team-a pod connected with its Secret; pg_trgm present; role has no attributes; limit 10
+PASS: team_b_main cannot read or create tables in team_a_orders (ERROR:  permission denied for schema public)
+PASS: rotated: new password works, old one is rejected
+PASS: team_b_main dropped, role dropped, Secret gone
+PASS: team_a_orders and its role kept in PostgreSQL, CNPG objects removed
+PASS: team-a/dup (formerly in conflict) now owns team_a_orders with the old data and a new password
+PASS: team-a/three is NotGranted: no DatabaseGrant in namespace db admits this claim for cluster shared: grant tenants does not include namespace team-a (the existing database and role are kept)
+PASS: team_a_three still exists
+PASS: metrics served
 ```
 
 ## Tests
