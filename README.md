@@ -69,6 +69,8 @@ Each pass (on every watch event and every 30 s) the controller:
    (default `{namespace}_*`), every extension is in `allowedExtensions`, `reclaimPolicy: delete`
    is allowed, the connection limit is within `maxConnectionLimit`, and the namespace has fewer
    than `maxDatabases` admitted claims under that grant.
+   Claims in conflict and claims being deleted do not count against `maxDatabases`; the next
+   admitted claim in creation order gets a freed slot.
 4. Refuses a name that another claim, an unmanaged `Database`/`DatabaseRole` or the cluster
    already uses, across all namespaces. The older claim keeps the name.
 5. Creates or updates, in the cluster's namespace, a basic-auth Secret with a random password,

@@ -207,6 +207,10 @@ k -n team-b get secret main-db >/dev/null 2>&1 && fail "secret team-b/main-db le
 pass "team_b_main dropped, role dropped, Secret gone"
 
 log "deleting a claim with reclaimPolicy retain keeps the data"
+# A claim being deleted no longer counts against maxDatabases, and claims in
+# conflict hold no slot, so the waiting claim "four" would take the free slot
+# before "dup" can. Remove it so the takeover below has room.
+k -n team-a delete databaseclaim four --timeout=120s
 k -n team-a delete databaseclaim orders --timeout=180s
 [[ "$(su_sql "select 1 from pg_database where datname = 'team_a_orders'")" == 1 ]] || fail "team_a_orders was dropped"
 [[ "$(su_sql "select 1 from pg_roles where rolname = 'team_a_orders'")" == 1 ]] || fail "role team_a_orders was dropped"
