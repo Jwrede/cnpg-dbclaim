@@ -1,0 +1,13 @@
+# In the application's namespace, owned by the application team.
+apiVersion: dbclaim.jonathanwrede.de/v1alpha1
+kind: DatabaseClaim
+metadata:
+  name: orders
+  namespace: team-a
+spec:
+  cluster:
+    namespace: databases
+    name: shared
+  # database: team_a_orders      # default: <namespace>_<name>
+  extensions: [pg_trgm]
+  # credentials land in Secret team-a/orders-db (keys as in CNPG's app secret)

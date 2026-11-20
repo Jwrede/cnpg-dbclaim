@@ -1,0 +1,104 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: databaseclaims.dbclaim.jonathanwrede.de
+spec:
+  group: dbclaim.jonathanwrede.de
+  scope: Namespaced
+  names:
+    kind: DatabaseClaim
+    listKind: DatabaseClaimList
+    plural: databaseclaims
+    singular: databaseclaim
+    shortNames: [dbc]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - {name: Cluster, type: string, jsonPath: .spec.cluster.name}
+        - {name: Database, type: string, jsonPath: .status.database}
+        - {name: Phase, type: string, jsonPath: .status.phase}
+        - {name: Secret, type: string, jsonPath: .status.secretName}
+        - {name: Age, type: date, jsonPath: .metadata.creationTimestamp}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: A request from an application namespace for a database and owner role on a shared CloudNativePG Cluster in another namespace.
+          properties:
+            spec:
+              type: object
+              required: [cluster]
+              properties:
+                cluster:
+                  type: object
+                  required: [name]
+                  properties:
+                    namespace: {type: string, description: Namespace of the Cluster. Defaults to the claim's namespace.}
+                    name: {type: string}
+                database: {type: string, description: "Name of the PostgreSQL database. Default: <namespace>_<name> with - and . replaced by _. Cannot be changed later."}
+                owner: {type: string, description: "Name of the owner role. Default: the database name. Cannot be changed later."}
+                extensions:
+                  type: array
+                  items: {type: string}
+                  description: Extensions to create in the database. The grant must allow each one.
+                connectionLimit: {type: integer, description: "Connection limit for the role and the database. Default: the grant's maxConnectionLimit, or -1."}
+                reclaimPolicy: {type: string, enum: [retain, delete], description: "What happens to the database and role in PostgreSQL when the claim is deleted. Default: retain. delete needs allowReclaimDelete in the grant."}
+                secretName: {type: string, description: "Secret in the claim's namespace that receives the credentials. Default: <name>-db."}
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: databasegrants.dbclaim.jonathanwrede.de
+spec:
+  group: dbclaim.jonathanwrede.de
+  scope: Namespaced
+  names:
+    kind: DatabaseGrant
+    listKind: DatabaseGrantList
+    plural: databasegrants
+    singular: databasegrant
+    shortNames: [dbg]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - {name: Cluster, type: string, jsonPath: .spec.cluster}
+        - {name: Pattern, type: string, jsonPath: .spec.namePattern}
+        - {name: Age, type: date, jsonPath: .metadata.creationTimestamp}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Consent, given in the namespace of a CloudNativePG Cluster, for DatabaseClaims from other namespaces.
+          properties:
+            spec:
+              type: object
+              required: [cluster]
+              properties:
+                cluster: {type: string, description: Name of a Cluster in this namespace.}
+                from:
+                  type: array
+                  description: Namespaces whose claims this grant admits. An empty list admits none.
+                  items:
+                    type: object
+                    properties:
+                      namespace: {type: string}
+                      namespaceSelector:
+                        type: object
+                        properties:
+                          matchLabels:
+                            type: object
+                            additionalProperties: {type: string}
+                namePattern: {type: string, description: "Glob that database and owner names must match; {namespace} is replaced by the claim's namespace with - and . turned into _. Default: {namespace}_*"}
+                maxDatabases: {type: integer, minimum: 0, description: "Claims admitted per namespace by this grant. 0: no limit."}
+                allowReclaimDelete: {type: boolean, description: "Whether claims may use reclaimPolicy delete (drop the database when the claim is deleted)."}
+                allowedExtensions:
+                  type: array
+                  items: {type: string}
+                maxConnectionLimit: {type: integer, minimum: 0, description: "Upper bound for a claim's connectionLimit, also the default. 0: no cap."}

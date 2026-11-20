@@ -1,0 +1,18 @@
+# In the namespace of the shared Cluster, owned by the database team.
+apiVersion: dbclaim.jonathanwrede.de/v1alpha1
+kind: DatabaseGrant
+metadata:
+  name: app-teams
+  namespace: databases
+spec:
+  cluster: shared
+  from:
+    - namespace: team-a
+    - namespaceSelector:
+        matchLabels:
+          shared-postgres: "allowed"
+  namePattern: "{namespace}_*"   # team-a may only create team_a_* databases and roles
+  maxDatabases: 3                 # per namespace
+  allowReclaimDelete: false       # claims cannot drop their database on deletion
+  allowedExtensions: [pg_trgm, citext]
+  maxConnectionLimit: 20

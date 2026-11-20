@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnpg-dbclaim
+  namespace: cnpg-dbclaim
+spec:
+  replicas: 1 # no leader election: run exactly one
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: cnpg-dbclaim}
+  template:
+    metadata:
+      labels: {app: cnpg-dbclaim}
+    spec:
+      serviceAccountName: cnpg-dbclaim
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: controller
+          image: cnpg-dbclaim
+          args: ["-resync=30s"]
+          ports:
+            - {name: metrics, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: metrics}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cnpg-dbclaim
+  namespace: cnpg-dbclaim
+spec:
+  selector: {app: cnpg-dbclaim}
+  ports:
+    - {name: metrics, port: 8080, targetPort: metrics}
