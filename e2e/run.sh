@@ -164,7 +164,7 @@ echo "$out"
 [[ "$p" == Succeeded ]] || fail "client pod $p"
 grep -qx 'rows=1' <<<"$out" || fail "insert/select"
 grep -qx 'ext=pg_trgm' <<<"$out" || fail "extension pg_trgm missing"
-grep -qx 'attrs=fffff limit=10' <<<"$out" || fail "role attributes or connection limit"
+grep -qx 'attrs=falsefalsefalsefalsefalse limit=10' <<<"$out" || fail "role attributes or connection limit"
 pass "team-a pod connected with its Secret; pg_trgm present; role has no attributes; limit 10"
 
 log "tenant isolation inside PostgreSQL"
